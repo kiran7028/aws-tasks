@@ -11,8 +11,6 @@ pipeline {
             steps {
                 echo "Checking out code..."
                 checkout scm
-                sh 'find . -name "pom.xml"'
-                sh 'cd subdirectory && mvn clean package -DskipTests'
             }
         }
 
