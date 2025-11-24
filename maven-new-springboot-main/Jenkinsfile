@@ -1,0 +1,31 @@
+pipeline{
+    agent any
+    tools {
+        maven 'maven'
+    }
+    stages{
+        stage('Checkout'){
+            steps{
+                sh 'ls -la'
+                git branch: 'main', changelog: false, credentialsId: 'kiran7028-github', poll: false, url: 'https://github.com/kiran7028/aws-tasks.git'
+            }
+        }
+        stage('Build'){
+            steps{
+                dir('maven-new-springboot-main') {
+                    sh 'ls -la'
+                    echo 'Building my code with Maven'
+                    sh 'mvn clean package'
+                }
+            }
+        }
+        stage('Test'){
+            steps{
+                dir('maven-new-springboot-main') {
+                    echo 'Test Maven'
+                    sh 'mvn test'
+                }
+            }
+        }
+    }
+}
