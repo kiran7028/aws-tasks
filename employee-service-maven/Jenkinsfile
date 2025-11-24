@@ -6,7 +6,7 @@ pipeline {
         DOCKER_REGISTRY = "your-dockerhub-username"
     }
 
-    //stages {
+    stages {
       //  stage('Checkout') {
         //    steps {
         //        echo "Checking out code..."
