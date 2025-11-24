@@ -3,10 +3,12 @@ pipeline {
     environment {
         DOCKER_IMAGE = "employee-service"
         DOCKER_REGISTRY = "your-dockerhub-username"
+        JAVA_HOME = "${tool 'jdk21'}"
+        PATH = "${JAVA_HOME}/bin:${PATH}"
     }
     tools {
         jdk 'jdk21'
-        maven 'maven-3911'
+        maven 'maven-3.8.5'
     }
 
     stages {
@@ -18,10 +20,12 @@ pipeline {
             }
         }
 
-        stage('Setup JDK') {
+        stage('Environment Check') {
             steps {
-                echo "Setting JDK 21"
-                tool name: 'jdk21'
+                echo "Checking environment..."
+                sh "java -version"
+                sh "mvn --version"
+                sh "echo JAVA_HOME: $JAVA_HOME"
             }
         }
 

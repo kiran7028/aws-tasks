@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_IMAGE = "employee-service"
+        DOCKER_REGISTRY = "your-dockerhub-username"
+    }
+    
+    tools {
+        // Try different common tool names
+        jdk 'OpenJDK21'  // or 'jdk-21' or 'Java21'
+        maven 'Maven'    // or 'maven' or 'Maven-3.8'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "Checking out code..."
+                checkout scm
+            }
+        }
+
+        stage('Environment Check') {
+            steps {
+                echo "Checking environment..."
+                sh "java -version"
+                sh "mvn --version"
+                sh "pwd && ls -la"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Building project..."
+                sh "mvn clean package -DskipTests"
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo "Running tests..."
+                sh "mvn test"
+            }
+            post {
+                always {
+                    publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Archive') {
+            steps {
+                echo "Archiving artifacts..."
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build completed successfully!"
+        }
+        failure {
+            echo "Build failed! Check logs."
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
