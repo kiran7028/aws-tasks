@@ -1,95 +1,85 @@
 pipeline {
+
     agent any
-    
+
+    tools {
+        jdk 'jdk17'
+        maven 'maven3'
+    }
+
     environment {
+        JAVA_HOME = "${tool 'jdk17'}"
+        PATH = "${JAVA_HOME}/bin:${PATH}"
         DOCKER_IMAGE = "employee-service"
         DOCKER_REGISTRY = "your-dockerhub-username"
     }
 
     stages {
-        stage('Setup Environment') {
-            steps {
-                script {
-                    // Try to set JAVA_HOME and Maven
-                    try {
-                        env.JAVA_HOME = tool name: 'jdk21', type: 'jdk'
-                    } catch (Exception e1) {
-                        try {
-                            env.JAVA_HOME = tool name: 'OpenJDK21', type: 'jdk'
-                        } catch (Exception e2) {
-                            try {
-                                env.JAVA_HOME = tool name: 'Java21', type: 'jdk'
-                            } catch (Exception e3) {
-                                echo "Using system Java"
-                                env.JAVA_HOME = sh(script: 'echo $JAVA_HOME', returnStdout: true).trim()
-                            }
-                        }
-                    }
-                    
-                    try {
-                        env.MAVEN_HOME = tool name: 'maven-3.8.5', type: 'maven'
-                    } catch (Exception e1) {
-                        try {
-                            env.MAVEN_HOME = tool name: 'Maven', type: 'maven'
-                        } catch (Exception e2) {
-                            try {
-                                env.MAVEN_HOME = tool name: 'maven', type: 'maven'
-                            } catch (Exception e3) {
-                                echo "Using system Maven"
-                            }
-                        }
-                    }
-                    
-                    env.PATH = "${env.JAVA_HOME}/bin:${env.MAVEN_HOME}/bin:${env.PATH}"
-                }
-            }
-        }
-
-        stage('Environment Check') {
-            steps {
-                echo "Checking environment..."
-                sh "java -version"
-                sh "mvn --version"
-                sh "pwd && ls -la"
-                sh "echo JAVA_HOME: $JAVA_HOME"
-                sh "echo MAVEN_HOME: $MAVEN_HOME"
-            }
-        }
-
 
         stage('Build') {
             steps {
-
                 echo "Building project..."
-                
-                sh "mvn clean package -DskipTests"
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo "Running tests..."
-                sh "mvn test"
-            }
-            post {
-                always {
-                    script {
-                        try {
-                            publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
-                        } catch (Exception e) {
-                            echo "Test results publishing failed: ${e.getMessage()}"
-                            // Try alternative
-                            junit 'target/surefire-reports/*.xml'
-                        }
-                    }
+                dir('employee-service-maven') {
+                    sh "mvn clean package -DskipTests"
                 }
             }
         }
 
-        stage('Archive') {
+        stage('Run Tests') {
             steps {
-                echo "Archiving artifacts..."
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                echo "Running unit tests..."
+                dir('employee-service-maven') {
+                    sh "mvn test"
+                }
+            }
+            post {
+                always {
+                    junit 'employee-service-maven/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Archive Artifact') {
+            steps {
+                echo "Archiving build artifacts..."
+                archiveArtifacts artifacts: 'employee-service-maven/target/*.jar', fingerprint: true
+            }
+        }
+
+        stage('Build Docker Image') {
+            when {
+                expression { return fileExists('employee-service-maven/Dockerfile') }
+            }
+            steps {
+                echo "Building Docker image..."
+                dir('employee-service-maven') {
+                    sh """
+                        docker build -t $DOCKER_REGISTRY/$DOCKER_IMAGE:latest .
+                    """
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            when {
+                expression { return fileExists('employee-service-maven/Dockerfile') }
+            }
+            steps {
+                echo "Pushing image to Docker Hub..."
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                     usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+
+                    sh "echo $PASS | docker login -u $USER --password-stdin"
+                    sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:latest"
+                }
+            }
+        }
+
+        stage('Deploy (Optional)') {
+            when { expression { return false } } // enable when needed
+            steps {
+                echo "Deploying application..."
+                // Example: scp/copy or kubectl apply
             }
         }
     }
@@ -100,9 +90,6 @@ pipeline {
         }
         failure {
             echo "Build failed! Check logs."
-        }
-        always {
-            cleanWs()
         }
     }
 }
