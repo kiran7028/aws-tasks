@@ -7,14 +7,6 @@ pipeline {
     }
 
     stages {
-      //  stage('Checkout') {
-        //    steps {
-        //        echo "Checking out code..."
-                //checkout scm
-          //      git branch: 'main', url: 'https://github.com/kiran7028/employee-service-maven.git'
-            //}
-        //}
-    //
         stage('Setup Environment') {
             steps {
                 script {
