@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: prod-namespace
+  name: api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: "gcr.io/google-samples/hello-app:2.0" # A different version
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: prod-namespace
+  name: api-service
+spec:
+  selector:
+    app: api
+  ports:
+  - port: 80
+    targetPort: 8080

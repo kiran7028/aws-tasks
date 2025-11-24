@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cal-app-v1
+  labels:
+    app: cal-app-v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cal-app-v1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: cal-app-v1
+    spec:
+      containers:
+        - name: cal
+          image: docker7028/cal-app-v1:latest
+          ports:
+            - containerPort: 80

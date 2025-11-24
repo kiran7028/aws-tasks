@@ -1,0 +1,22 @@
+# kubernetes/deployment-green.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-green
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      color: green
+  template:
+    metadata:
+      labels:
+        app: myapp
+        color: green
+    spec:
+      containers:
+      - name: myapp
+        image: IMAGE_PLACEHOLDER # This will be replaced by the pipeline
+        ports:
+        - containerPort: 8080

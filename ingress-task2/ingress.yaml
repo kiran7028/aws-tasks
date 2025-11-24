@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: stag-microservices
+  name: ecommerce-ingress
+  annotations:
+    # Annotations for the AWS Load Balancer Controller
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:150965600049:certificate/57483fa6-cafa-445f-971f-86b2de206959
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-Res-2021-06
+spec:
+  # We use the AWS Load Balancer controller
+  ingressClassName: alb
+  rules:
+  - host: calculator.devopscloudai.com
+    http:
+      paths:
+      # Rules must be ordered from most specific to least specific for ALB
+      # --- Auth Rule ---
+      - path: /auth/*
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-svc
+            port:
+              number: 80
+      # --- User Rule ---
+      - path: /users/*
+        pathType: Prefix
+        backend:
+          service:
+            name: user-svc
+            port:
+              number: 80
+      # --- Product Rule ---
+      - path: /products/*
+        pathType: Prefix
+        backend:
+          service:
+            name: product-svc
+            port:
+              number: 80
+      # --- Order Rule ---
+      - path: /orders/*
+        pathType: Prefix
+        backend:
+          service:
+            name: order-svc
+            port:
+              number: 80
+      # --- Frontend Rule (Default/Catch-all) ---
+      # MUST BE LAST. Matches anything not caught by the rules above.
+      - path: /*
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-svc
+            port:
+              number: 80

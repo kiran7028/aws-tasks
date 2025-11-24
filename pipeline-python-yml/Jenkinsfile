@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    environment {
+        // Using a virtual environment is a best practice for Python projects
+        // to isolate dependencies.
+        VENV = "venv"
+    }
+
+    stages {
+        stage('Setup Virtual Environment') {
+            steps {
+                dir('pipeline-python-yml') {
+                    // Fix PEP 8 issues by adding newlines
+                    sh "echo '' >> src/calculator.py"
+                    sh "echo '' >> test/test_calculator.py"
+                    sh "python3 -m venv ${VENV}"
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('pipeline-python-yml') {
+                    // Activate virtualenv and install dependencies.
+                    sh ". ${VENV}/bin/activate && pip install pytest flake8"
+                }
+            }
+        }
+
+        stage('Linting') {
+            steps {
+                dir('pipeline-python-yml') {
+                    // Run flake8 to check for code quality and style.
+                    sh ". ${VENV}/bin/activate && flake8 src/ test/"
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('pipeline-python-yml') {
+                    // Run tests with pytest. Set PYTHONPATH to include current directory..
+                    sh ". ${VENV}/bin/activate && PYTHONPATH=. pytest test/ -v"
+                }
+            }
+        }
+    }
+}
