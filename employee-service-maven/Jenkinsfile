@@ -6,15 +6,15 @@ pipeline {
         DOCKER_REGISTRY = "your-dockerhub-username"
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                echo "Checking out code..."
+    //stages {
+      //  stage('Checkout') {
+        //    steps {
+        //        echo "Checking out code..."
                 //checkout scm
-                git branch: 'main', url: 'https://github.com/kiran7028/employee-service-maven.git'
-            }
-        }
-
+          //      git branch: 'main', url: 'https://github.com/kiran7028/employee-service-maven.git'
+            //}
+        //}
+    //
         stage('Setup Environment') {
             steps {
                 script {
