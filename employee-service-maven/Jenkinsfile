@@ -5,12 +5,6 @@ pipeline {
         DOCKER_IMAGE = "employee-service"
         DOCKER_REGISTRY = "your-dockerhub-username"
     }
-    
-    tools {
-        // Try different common tool names
-        jdk 'OpenJDK21'  // or 'jdk-21' or 'Java21'
-        maven 'Maven'    // or 'maven' or 'Maven-3.8'
-    }
 
     stages {
         stage('Checkout') {
@@ -20,12 +14,52 @@ pipeline {
             }
         }
 
+        stage('Setup Environment') {
+            steps {
+                script {
+                    // Try to set JAVA_HOME and Maven
+                    try {
+                        env.JAVA_HOME = tool name: 'jdk21', type: 'jdk'
+                    } catch (Exception e1) {
+                        try {
+                            env.JAVA_HOME = tool name: 'OpenJDK21', type: 'jdk'
+                        } catch (Exception e2) {
+                            try {
+                                env.JAVA_HOME = tool name: 'Java21', type: 'jdk'
+                            } catch (Exception e3) {
+                                echo "Using system Java"
+                                env.JAVA_HOME = sh(script: 'echo $JAVA_HOME', returnStdout: true).trim()
+                            }
+                        }
+                    }
+                    
+                    try {
+                        env.MAVEN_HOME = tool name: 'maven-3.8.5', type: 'maven'
+                    } catch (Exception e1) {
+                        try {
+                            env.MAVEN_HOME = tool name: 'Maven', type: 'maven'
+                        } catch (Exception e2) {
+                            try {
+                                env.MAVEN_HOME = tool name: 'maven', type: 'maven'
+                            } catch (Exception e3) {
+                                echo "Using system Maven"
+                            }
+                        }
+                    }
+                    
+                    env.PATH = "${env.JAVA_HOME}/bin:${env.MAVEN_HOME}/bin:${env.PATH}"
+                }
+            }
+        }
+
         stage('Environment Check') {
             steps {
                 echo "Checking environment..."
                 sh "java -version"
                 sh "mvn --version"
                 sh "pwd && ls -la"
+                sh "echo JAVA_HOME: $JAVA_HOME"
+                sh "echo MAVEN_HOME: $MAVEN_HOME"
             }
         }
 
@@ -43,7 +77,15 @@ pipeline {
             }
             post {
                 always {
-                    publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
+                    script {
+                        try {
+                            publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
+                        } catch (Exception e) {
+                            echo "Test results publishing failed: ${e.getMessage()}"
+                            // Try alternative
+                            junit 'target/surefire-reports/*.xml'
+                        }
+                    }
                 }
             }
         }
