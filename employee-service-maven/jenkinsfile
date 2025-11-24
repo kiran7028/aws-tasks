@@ -1,0 +1,107 @@
+pipeline {
+
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "employee-service"
+        DOCKER_REGISTRY = "your-dockerhub-username"
+    }
+    tools {
+        jdk 'jdk21'
+        maven 'maven-3.8.5'
+    }
+    
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo "Checking out code..."
+                checkout scm
+            }
+        }
+
+        stage('Setup JDK') {
+            steps {
+                echo "Setting JDK 21"
+                tool name: 'jdk21'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                echo "Running Maven clean"
+                sh "mvn clean"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Building project..."
+                sh "mvn package -DskipTests"
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                echo "Running unit tests..."
+                sh "mvn test"
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Archive Artifact') {
+            steps {
+                echo "Archiving build artifacts..."
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
+
+        stage('Build Docker Image') {
+            when {
+                expression { return fileExists('Dockerfile') }
+            }
+            steps {
+                echo "Building Docker image..."
+                sh """
+                    docker build -t $DOCKER_REGISTRY/$DOCKER_IMAGE:latest .
+                """
+            }
+        }
+
+        stage('Push Docker Image') {
+            when {
+                expression { return fileExists('Dockerfile') }
+            }
+            steps {
+                echo "Pushing image to Docker Hub..."
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                     usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+
+                    sh "echo $PASS | docker login -u $USER --password-stdin"
+                    sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:latest"
+                }
+            }
+        }
+
+        stage('Deploy (Optional)') {
+            when { expression { return false } } // enable when needed
+            steps {
+                echo "Deploying application..."
+                // Example: scp/copy or kubectl apply
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build completed successfully!"
+        }
+        failure {
+            echo "Build failed! Check logs."
+        }
+    }
+}
