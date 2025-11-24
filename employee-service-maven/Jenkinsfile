@@ -68,7 +68,7 @@ pipeline {
             steps {
 
                 echo "Building project..."
-                cd 'employee-service-maven/employee-service-maven'
+                
                 sh "mvn clean package -DskipTests"
             }
         }
